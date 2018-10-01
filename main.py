@@ -125,12 +125,11 @@ class VkBot:
                 thisgame = self.games[key]
                 self.write_msg(message.user_id,
                                'Название игры: ' + thisgame.name + '.\nМесто игры: ' + thisgame.place + '.')
-                self.message_help(message)
             except KeyError:
                 print('Undefined behaviour')
         if len(game_keys) == 0:
             self.write_msg(message.user_id, 'Список пуст.')
-            self.message_help(message)
+        self.message_help(message)
 
     def bot_processing(self):
         longpoll = VkLongPoll(self.vk_session)
