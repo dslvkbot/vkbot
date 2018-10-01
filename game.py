@@ -5,3 +5,6 @@ class Game:
         self.min_person = min_person
         self.max_person = max_person
         self.place = place
+
+    def set_place(self, place):
+        self.place = place

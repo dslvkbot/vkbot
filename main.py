@@ -9,7 +9,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 class VkBot:
     def __init__(self, token):
         self.vk_session = vk_api.VkApi(token=token)
-        self.games = list()
+        self.games = dict()
 
     def write_msg(self, user_id, s):
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': s})
@@ -31,12 +31,18 @@ class VkBot:
         elif message.text == 'Создать игру':
             self.message_make_game(message)
             return
+        elif message.text == 'Удалить игру':
+            self.message_delete_game(message)
+            return
+        elif message.text == 'Просмотреть список игр':
+            self.message_list_game(message)
+            return
         else:
             last_text = self.get_last_msg_text(message.peer_id)
             if last_text == 'Отлично!\nВведите название игры.':
                 self.message_entered_name(message)
             elif last_text == 'Теперь введите место игры.':
-                self
+                self.message_entered_place(message)
 
     def make_positive_keyboard(self, message):
         keyboard = json.dumps(
@@ -81,20 +87,50 @@ class VkBot:
                          'color': 'primary'
                      }]
                  ]})
-        keyboard = keyboard.replace('makegame', 'Создать игру').replace('deletegame', 'Удалить игру')\
+        keyboard = keyboard.replace('makegame', 'Создать игру').replace('deletegame', 'Удалить игру') \
             .replace('listgame', 'Просмотреть список игр')
-        self.write_keyboard(message.user_id, 'Выберите один из вариантов', keyboard)
+        self.write_keyboard(message.user_id, 'Выберите один из вариантов.', keyboard)
 
     def message_make_game(self, message):
         self.write_msg(message.user_id, 'Отлично!\nВведите название игры.')
 
     def message_entered_name(self, message):
         temp = game.Game(message.user_id, name=message.text)
-        self.games.insert(message.user_id, temp)
-        self.write_msg(message.user_id, "Теперь введите место игры.")
+        self.games.update({message.user_id: temp})
+        self.write_msg(message.user_id, 'Теперь введите место игры.')
 
     def message_entered_place(self, message):
-        temp = self.games.pop(message.user_id)
+        try:
+            thisgame = self.games[message.user_id]
+            thisgame.set_place(place=message.text)
+            self.write_msg(message.user_id, thisgame.name + ' ' + message.text + ' принято.')
+            self.message_help(message)
+        except KeyError:
+            self.message_help(message)
+
+    def message_delete_game(self, message):
+        try:
+            thisgame = self.games[message.user_id]
+            self.games.pop(message.user_id)
+            self.write_msg(message.user_id, thisgame.name + ' ' + thisgame.place + ' удалено.')
+            self.message_help(message)
+        except KeyError:
+            self.write_msg(message.user_id, 'Игра не найдена.')
+            self.message_help(message)
+
+    def message_list_game(self, message):
+        game_keys = self.games.keys()
+        for key in game_keys:
+            try:
+                thisgame = self.games[key]
+                self.write_msg(message.user_id,
+                               'Название игры: ' + thisgame.name + '.\nМесто игры: ' + thisgame.place + '.')
+                self.message_help(message)
+            except KeyError:
+                print('Undefined behaviour')
+        if len(game_keys) == 0:
+            self.write_msg(message.user_id, 'Список пуст.')
+            self.message_help(message)
 
     def bot_processing(self):
         longpoll = VkLongPoll(self.vk_session)
